@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.map
 fun HomeScreen(
     authViewModel: AuthViewModel,
     onNavigateToLogin: () -> Unit,
+    onNavigateToMLKit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by authViewModel.uiState.collectAsState()
@@ -65,7 +67,17 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { authViewModel.signOut() }
+                    onClick = onNavigateToMLKit,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Try ML Kit Text Recognition")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { authViewModel.signOut() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Sign Out")
                 }

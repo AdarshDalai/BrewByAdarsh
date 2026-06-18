@@ -12,6 +12,7 @@ import com.cloudsbay.brewbyadarsh.features.auth.presentation.ForgotPasswordScree
 import com.cloudsbay.brewbyadarsh.features.auth.presentation.LoginScreen
 import com.cloudsbay.brewbyadarsh.features.auth.presentation.SignUpScreen
 import com.cloudsbay.brewbyadarsh.features.home.presentation.HomeScreen
+import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.MLKitScreen
 import kotlinx.serialization.Serializable
 import androidx.navigation.toRoute
 
@@ -31,6 +32,9 @@ object ForgotPassword
 // App Routes
 @Serializable
 object Home
+
+@Serializable
+object MLKit
 
 @Serializable
 data class Details(val id: String)
@@ -128,6 +132,16 @@ fun BrewNavHost(
                     navController.navigate(Login) {
                         popUpTo(Home) { inclusive = true }
                     }
+                },
+                onNavigateToMLKit = {
+                    navController.navigate(MLKit)
+                }
+            )
+        }
+        composable<MLKit> {
+            MLKitScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

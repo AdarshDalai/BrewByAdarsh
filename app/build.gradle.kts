@@ -115,4 +115,14 @@ dependencies {
 
     //Google Fonts
     implementation("androidx.compose.ui:ui-text-google-fonts:1.11.2")
+
+    // ML Kit
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.mlkit.face.detection)
+
+    // CameraX
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 }

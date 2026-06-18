@@ -1,11 +1,13 @@
 package com.cloudsbay.brewbyadarsh.features.auth.data
 
+import android.util.Log
 import com.cloudsbay.brewbyadarsh.core.SessionManager
 import com.cloudsbay.brewbyadarsh.features.auth.domain.AuthRepository
 import com.cloudsbay.brewbyadarsh.features.auth.domain.models.AuthResult
 import com.cloudsbay.brewbyadarsh.features.auth.domain.models.AuthSession
 import com.cloudsbay.brewbyadarsh.features.auth.domain.models.AuthUser
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +24,11 @@ class AuthRepositoryImpl @Inject constructor(
     private val sessionManager: SessionManager
 ) : AuthRepository {
 
+    companion object {
+        private const val TAG = "AuthRepository"
+    }
+
+
     override suspend fun getSession(): AuthResult<AuthSession?> = withContext(Dispatchers.IO) {
         try {
             tryCompletePendingSignOut()
@@ -37,13 +44,16 @@ class AuthRepositoryImpl @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 tryCompletePendingSignOut()
-                auth.signUpWith(Email) {
+                Log.d(TAG, "signUp: starting for $email")
+                val signUpResult = auth.signUpWith(Email) {
                     this.email = email
                     this.password = password
                 }
+                Log.d(TAG, "signUp: result=$signUpResult")
 
-                val user = auth.currentUserOrNull()
+                val user = signUpResult ?: auth.currentUserOrNull()
                 val session = auth.currentSessionOrNull()
+                Log.d(TAG, "signUp: user=$user, session=$session")
 
                 if (session == null && user != null) {
                     // Sign up successful but email verification required
@@ -65,6 +75,7 @@ class AuthRepositoryImpl @Inject constructor(
                     AuthResult.Error(Exception("Sign up failed"), appError.message)
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "signUp: error", e)
                 val appError = AuthErrorMapper.map(e, AuthAction.SIGN_UP)
                 AuthResult.Error(e, appError.message)
             }
@@ -73,11 +84,13 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun signIn(email: String, password: String): AuthResult<AuthSession> =
         withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "signIn: starting for $email")
                 tryCompletePendingSignOut()
                 auth.signInWith(Email) {
                     this.email = email
                     this.password = password
                 }
+                Log.d(TAG, "signIn: authentication successful for $email")
                 val supabaseSession = auth.currentSessionOrNull() ?: throw Exception("Session is null after sign in")
 
                 val user = AuthUser(
@@ -92,6 +105,7 @@ class AuthRepositoryImpl @Inject constructor(
                 )
 
                 if (user.emailConfirmedAt == null) {
+                    Log.d(TAG, "signIn: email not confirmed for $email")
                     return@withContext AuthResult.UserVerificationRequired(
                         "Please verify your email to continue."
                     )
@@ -105,10 +119,13 @@ class AuthRepositoryImpl @Inject constructor(
                 )
 
                 sessionManager.saveSession(authSession)
+                Log.d(TAG, "signIn: session saved successfully for $email")
                 AuthResult.Success(authSession)
             } catch (e: Exception) {
+                Log.e(TAG, "signIn: error", e)
                 val errorMessage = (e.message ?: "").lowercase()
                 if (errorMessage.contains("email not confirmed") || errorMessage.contains("email not verified")) {
+                    Log.w(TAG, "signIn: email not confirmed for $email")
                     return@withContext AuthResult.UserVerificationRequired(
                         "Please verify your email to continue."
                     )
@@ -252,8 +269,12 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun resendVerificationEmail(email: String): AuthResult<Unit> =
         withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "resendVerificationEmail: starting for $email")
+                auth.resendEmail(type = OtpType.Email.SIGNUP, email = email)
+                Log.d(TAG, "resendVerificationEmail: success for $email")
                 AuthResult.Success(Unit)
             } catch (e: Exception) {
+                Log.e(TAG, "resendVerificationEmail: error", e)
                 val appError = AuthErrorMapper.map(e, AuthAction.RESEND_VERIFICATION)
                 AuthResult.Error(e, appError.message)
             }

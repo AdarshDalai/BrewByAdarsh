@@ -13,6 +13,7 @@ import com.cloudsbay.brewbyadarsh.features.auth.domain.usecases.SignInWithOAuthU
 import com.cloudsbay.brewbyadarsh.features.auth.domain.usecases.SignOutUseCase
 import com.cloudsbay.brewbyadarsh.features.auth.domain.usecases.SignUpUseCase
 import com.cloudsbay.brewbyadarsh.features.auth.domain.usecases.RefreshSessionUseCase
+import com.cloudsbay.brewbyadarsh.features.auth.domain.usecases.ResendVerificationEmailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +33,12 @@ class AuthViewModel @Inject constructor(
     private val getCurrentSessionUseCase: GetCurrentSessionUseCase,
     private val signInWithOAuthUseCase: SignInWithOAuthUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val refreshSessionUseCase: RefreshSessionUseCase
+    private val refreshSessionUseCase: RefreshSessionUseCase,
+    private val resendVerificationEmailUseCase: ResendVerificationEmailUseCase
 ) : ViewModel() {
+
+    internal var signUpPassword: String? = null
+        private set
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -45,6 +50,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signIn(email: String, password: String) {
+        signUpPassword = password
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = signInUseCase(email, password)) {
@@ -84,6 +90,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signUp(email: String, password: String, confirmPassword: String) {
+        signUpPassword = password
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, message = null) }
             when (val result = signUpUseCase(email, password, confirmPassword)) {
@@ -114,7 +121,8 @@ class AuthViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             message = result.message,
-                            hasUnverifiedEmail = true
+                            hasUnverifiedEmail = true,
+                            unverifiedUserEmail = email
                         )
                     }
                 }
@@ -272,31 +280,62 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun checkEmailVerification() {
+    fun checkEmailVerification(isManual: Boolean = false) {
+        val email = uiState.value.unverifiedUserEmail ?: return
+        val password = signUpPassword
+        if (password == null) {
+            if (isManual) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Session expired or password not found. Please click 'Go to Sign In' to log in manually."
+                    )
+                }
+            }
+            return
+        }
+
         viewModelScope.launch {
-            when (val result = refreshSessionUseCase()) {
+            if (isManual) {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+            }
+            when (val result = signInUseCase(email, password)) {
                 is AuthResult.Success -> {
-                    val session = result.data
-                    val user = session.user
-                    if (user.emailConfirmedAt != null) {
-                        _uiState.update {
-                            it.copy(
-                                currentSession = session,
-                                authUser = user,
-                                isAuthenticated = true,
-                                hasUnverifiedEmail = false,
-                                unverifiedUserEmail = null,
-                                error = null,
-                                message = null
-                            )
-                        }
+                    signUpPassword = null // clear for security hygiene
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            currentSession = result.data,
+                            authUser = result.data.user,
+                            isAuthenticated = true,
+                            hasUnverifiedEmail = false,
+                            unverifiedUserEmail = null,
+                            error = null,
+                            message = null
+                        )
+                    }
+                }
+                is AuthResult.UserVerificationRequired -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            message = if (isManual) "Email is still not verified. Please check your inbox." else null
+                        )
                     }
                 }
                 is AuthResult.Error -> {
-                    // Silent on periodic checks to avoid noisy UI while waiting for verification.
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = if (isManual) result.message else null
+                        )
+                    }
                 }
-                is AuthResult.Loading -> Unit
-                is AuthResult.UserVerificationRequired -> Unit
+                is AuthResult.Loading -> {
+                    if (isManual) {
+                        _uiState.update { it.copy(isLoading = true) }
+                    }
+                }
             }
         }
     }
@@ -309,6 +348,34 @@ class AuthViewModel @Inject constructor(
                         authUser = user,
                         isAuthenticated = user != null
                     )
+                }
+            }
+        }
+    }
+
+    fun resendVerificationEmail() {
+        val email = uiState.value.unverifiedUserEmail ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            when (val result = resendVerificationEmailUseCase(email)) {
+                is AuthResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            message = "Verification email resent successfully."
+                        )
+                    }
+                }
+                is AuthResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             }
         }

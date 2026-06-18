@@ -54,39 +54,20 @@ class SessionManager @Inject constructor(
         }
     }
 
+    /**
+     * Loads the session from DataStore.
+     * Throws [IllegalStateException] when no session exists — this is the contract
+     * required by the supabase-kt SDK. The SDK catches this internally and falls
+     * back to an unauthenticated state.
+     *
+     * For nullable access, use [loadSessionOrNull] (default implementation in the
+     * interface wraps this in try/catch).
+     */
     override suspend fun loadSession(): UserSession {
-        Log.d(TAG, "loadSession() called")
         val preferences = dataStore.data.first()
-        val sessionJson = preferences[SUPABASE_SESSION_KEY] 
-            ?: run {
-                Log.w(TAG, "loadSession: No session found in DataStore")
-                error("No session found")
-            }
-        return try {
-            json.decodeFromString<UserSession>(sessionJson).also {
-                Log.d(TAG, "loadSession: Successfully loaded session for user: ${it.user?.id}")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "loadSession: Failed to decode session JSON", e)
-            throw e
-        }
-    }
-
-    override suspend fun loadSessionOrNull(): UserSession? {
-        Log.d(TAG, "loadSessionOrNull() called")
-        val preferences = dataStore.data.first()
-        val sessionJson = preferences[SUPABASE_SESSION_KEY] ?: run {
-            Log.d(TAG, "loadSessionOrNull: No session found")
-            return null
-        }
-        return try {
-            json.decodeFromString<UserSession>(sessionJson).also {
-                Log.d(TAG, "loadSessionOrNull: Successfully loaded session for user: ${it.user?.id}")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "loadSessionOrNull: Failed to decode session JSON", e)
-            null
-        }
+        val sessionJson = preferences[SUPABASE_SESSION_KEY]
+            ?: error("No session found")
+        return json.decodeFromString<UserSession>(sessionJson)
     }
 
     override suspend fun deleteSession() {

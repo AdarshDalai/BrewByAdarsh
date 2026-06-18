@@ -13,6 +13,7 @@ import com.cloudsbay.brewbyadarsh.features.auth.presentation.LoginScreen
 import com.cloudsbay.brewbyadarsh.features.auth.presentation.SignUpScreen
 import com.cloudsbay.brewbyadarsh.features.home.presentation.HomeScreen
 import kotlinx.serialization.Serializable
+import androidx.navigation.toRoute
 
 // Auth Routes
 @Serializable
@@ -90,7 +91,8 @@ fun BrewNavHost(
         }
         composable<EmailVerification> { backStackEntry ->
             val authViewModel: AuthViewModel = hiltViewModel()
-            val email = backStackEntry.arguments?.getString("email") ?: ""
+            val route = backStackEntry.toRoute<EmailVerification>()
+            val email = route.email
             EmailVerificationScreen(
                 viewModel = authViewModel,
                 userEmail = email,
@@ -101,6 +103,11 @@ fun BrewNavHost(
                 },
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onNavigateToLogin = {
+                    navController.navigate(Login) {
+                        popUpTo(Login) { inclusive = true }
+                    }
                 }
             )
         }

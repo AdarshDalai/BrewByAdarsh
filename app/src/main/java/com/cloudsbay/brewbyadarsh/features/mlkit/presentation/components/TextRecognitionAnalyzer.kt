@@ -24,6 +24,8 @@ class TextRecognitionAnalyzer(
                 .addOnSuccessListener { visionText ->
                     if (visionText.text.isNotBlank()) {
                         onTextDetected(visionText.text)
+                    } else {
+                        onTextDetected("No text detected")
                     }
                 }
                 .addOnFailureListener { e ->

@@ -11,22 +11,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.components.BarcodeScannerAnalyzer
-import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.components.CameraPreview
-import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.components.TextRecognitionAnalyzer
+import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.components.*
 
 enum class MLKitMode {
     TEXT_RECOGNITION,
-    BARCODE_SCANNING
+    BARCODE_SCANNING,
+    FACE_DETECTION,
+    IMAGE_LABELING,
+    OBJECT_DETECTION
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MLKitScreen(
+    mode: MLKitMode,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -38,8 +39,6 @@ fun MLKitScreen(
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
-
-    var mode by remember { mutableStateOf(MLKitMode.TEXT_RECOGNITION) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -57,18 +56,20 @@ fun MLKitScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ML Kit Demo") },
+                title = { 
+                    Text(
+                        when (mode) {
+                            MLKitMode.TEXT_RECOGNITION -> "Text Recognition"
+                            MLKitMode.BARCODE_SCANNING -> "Barcode Scanning"
+                            MLKitMode.FACE_DETECTION -> "Face Detection"
+                            MLKitMode.IMAGE_LABELING -> "Image Labeling"
+                            MLKitMode.OBJECT_DETECTION -> "Object Detection"
+                        }
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Text("<-")
-                    }
-                },
-                actions = {
-                    TextButton(onClick = {
-                        mode = if (mode == MLKitMode.TEXT_RECOGNITION) MLKitMode.BARCODE_SCANNING
-                        else MLKitMode.TEXT_RECOGNITION
-                    }) {
-                        Text(if (mode == MLKitMode.TEXT_RECOGNITION) "Switch to Barcode" else "Switch to Text")
                     }
                 }
             )
@@ -82,17 +83,14 @@ fun MLKitScreen(
             if (hasCameraPermission) {
                 var detectedResult by remember { mutableStateOf("") }
                 
-                // Clear result when switching mode
-                LaunchedEffect(mode) {
-                    detectedResult = ""
-                }
-
                 Column(modifier = Modifier.fillMaxSize()) {
                     val analyzer = remember(mode) {
-                        if (mode == MLKitMode.TEXT_RECOGNITION) {
-                            TextRecognitionAnalyzer { detectedResult = it }
-                        } else {
-                            BarcodeScannerAnalyzer { detectedResult = it }
+                        when (mode) {
+                            MLKitMode.TEXT_RECOGNITION -> TextRecognitionAnalyzer { detectedResult = it }
+                            MLKitMode.BARCODE_SCANNING -> BarcodeScannerAnalyzer { detectedResult = it }
+                            MLKitMode.FACE_DETECTION -> FaceDetectionAnalyzer { detectedResult = it }
+                            MLKitMode.IMAGE_LABELING -> ImageLabelingAnalyzer { detectedResult = it }
+                            MLKitMode.OBJECT_DETECTION -> ObjectDetectionAnalyzer { detectedResult = it }
                         }
                     }
 
@@ -116,13 +114,13 @@ fun MLKitScreen(
                                 .verticalScroll(rememberScrollState())
                         ) {
                             Text(
-                                text = if (mode == MLKitMode.TEXT_RECOGNITION) "Detected Text:" else "Detected Barcode:",
+                                text = "Detection Result:",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = detectedResult.ifBlank { "Point camera at ${if (mode == MLKitMode.TEXT_RECOGNITION) "text" else "barcode"}..." },
+                                text = detectedResult.ifBlank { "Point camera at target..." },
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }

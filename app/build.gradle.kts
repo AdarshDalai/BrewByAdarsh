@@ -120,6 +120,8 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.mlkit.face.detection)
+    implementation(libs.mlkit.image.labeling)
+    implementation(libs.mlkit.objectdetection)
 
     // CameraX
     implementation(libs.androidx.camera.camera2)

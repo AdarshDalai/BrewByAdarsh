@@ -4,14 +4,16 @@ import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
+import java.util.Locale
 
-class BarcodeScannerAnalyzer(
-    private val onBarcodeDetected: (String) -> Unit
+class ImageLabelingAnalyzer(
+    private val onLabelsDetected: (String) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    private val scanner = BarcodeScanning.getClient()
+    private val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
@@ -19,15 +21,15 @@ class BarcodeScannerAnalyzer(
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
-            scanner.process(image)
-                .addOnSuccessListener { barcodes ->
-                    if (barcodes.isNotEmpty()) {
-                        val result = barcodes.joinToString("\n") { barcode ->
-                            barcode.rawValue ?: "Unknown barcode"
+            labeler.process(image)
+                .addOnSuccessListener { labels ->
+                    if (labels.isNotEmpty()) {
+                        val result = labels.joinToString("\n") { label ->
+                            "${label.text} (${String.format(Locale.US, "%.2f", label.confidence)})"
                         }
-                        onBarcodeDetected(result)
+                        onLabelsDetected(result)
                     } else {
-                        onBarcodeDetected("Scanning for barcodes...")
+                        onLabelsDetected("Identifying objects...")
                     }
                 }
                 .addOnFailureListener {

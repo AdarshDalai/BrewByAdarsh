@@ -68,6 +68,13 @@ fun CameraPreview(
                 }
             }, executor)
             previewView
+        },
+        onRelease = {
+            try {
+                cameraProviderFuture.get().unbindAll()
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     )
 }

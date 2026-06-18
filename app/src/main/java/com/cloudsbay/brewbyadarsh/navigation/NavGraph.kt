@@ -12,6 +12,7 @@ import com.cloudsbay.brewbyadarsh.features.auth.presentation.ForgotPasswordScree
 import com.cloudsbay.brewbyadarsh.features.auth.presentation.LoginScreen
 import com.cloudsbay.brewbyadarsh.features.auth.presentation.SignUpScreen
 import com.cloudsbay.brewbyadarsh.features.home.presentation.HomeScreen
+import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.MLKitMode
 import com.cloudsbay.brewbyadarsh.features.mlkit.presentation.MLKitScreen
 import kotlinx.serialization.Serializable
 import androidx.navigation.toRoute
@@ -34,7 +35,19 @@ object ForgotPassword
 object Home
 
 @Serializable
-object MLKit
+object TextRecognition
+
+@Serializable
+object BarcodeScanning
+
+@Serializable
+object FaceDetection
+
+@Serializable
+object ImageLabeling
+
+@Serializable
+object ObjectDetection
 
 @Serializable
 data class Details(val id: String)
@@ -133,16 +146,41 @@ fun BrewNavHost(
                         popUpTo(Home) { inclusive = true }
                     }
                 },
-                onNavigateToMLKit = {
-                    navController.navigate(MLKit)
-                }
+                onNavigateToTextRecognition = { navController.navigate(TextRecognition) },
+                onNavigateToBarcodeScanning = { navController.navigate(BarcodeScanning) },
+                onNavigateToFaceDetection = { navController.navigate(FaceDetection) },
+                onNavigateToImageLabeling = { navController.navigate(ImageLabeling) },
+                onNavigateToObjectDetection = { navController.navigate(ObjectDetection) }
             )
         }
-        composable<MLKit> {
+        composable<TextRecognition> {
             MLKitScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                mode = MLKitMode.TEXT_RECOGNITION,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<BarcodeScanning> {
+            MLKitScreen(
+                mode = MLKitMode.BARCODE_SCANNING,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<FaceDetection> {
+            MLKitScreen(
+                mode = MLKitMode.FACE_DETECTION,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<ImageLabeling> {
+            MLKitScreen(
+                mode = MLKitMode.IMAGE_LABELING,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<ObjectDetection> {
+            MLKitScreen(
+                mode = MLKitMode.OBJECT_DETECTION,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable<Details> {
